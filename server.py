@@ -2262,7 +2262,18 @@ window.__HIST__ = {json.dumps(hist)};
         path=self.path.split("?")[0]
         n=int(self.headers.get("Content-Length",0))
         body=json.loads(self.rfile.read(n)) if n else {}
-        if path=="/api/bot/test_signal":
+        if path=="/api/bot/portfolio":
+            # Manual portfolio sync
+            with grid_lock:
+                pf = grid["portfolio"]
+                if "cash_usd" in body: pf["cash_usd"] = float(body["cash_usd"])
+                if "xrp_held" in body: pf["xrp_held"] = float(body["xrp_held"])
+                if "avg_entry" in body: pf["avg_entry"] = float(body["avg_entry"])
+                if "last_buy_price" in body: pf["last_buy_price"] = float(body["last_buy_price"])
+                if "last_sell_price" in body: pf["last_sell_price"] = float(body["last_sell_price"])
+                log.info(f"Portfolio manually synced: cash=${pf['cash_usd']} xrp={pf['xrp_held']} avg=${pf['avg_entry']}")
+            self._json({"ok":True,"portfolio":grid["portfolio"]})
+        elif path=="/api/bot/test_signal":
             side = body.get("side","BUY").upper()
             with grid_lock:
                 snap = latest_snapshot
