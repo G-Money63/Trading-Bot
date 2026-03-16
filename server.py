@@ -1920,7 +1920,11 @@ function renderBotStatus(s){
   const detail=document.getElementById('botStatusDetail');
   if(detail&&s.config)detail.textContent=`${s.config.levels} levels · $${s.config.lower}–$${s.config.upper} · ${(s.mode||'paper').toUpperCase()} mode`;
   const cb=document.getElementById('cbStat');
-  if(cb){cb.textContent=s.cb_connected?'CONNECTED ✓':'NOT SET';cb.style.color=s.cb_connected?'var(--green)':'var(--red)';}
+  if(cb){
+    cb.textContent=s.cb_connected?'CONNECTED ✓':'NOT SET';
+    cb.style.color=s.cb_connected?'var(--green)':'var(--red)';
+    cb.style.fontWeight='700';
+  }
   if(s.config){
     document.getElementById('cfgUpper').value=s.config.upper||1.50;
     document.getElementById('cfgLower').value=s.config.lower||1.35;
@@ -1981,16 +1985,12 @@ function activateBot(){
   const upper=parseFloat(document.getElementById('cfgUpper')?.value||0);
   if(!lower||!upper||upper<=lower){alert('Please set a valid price range first.');return;}
   if(currentMode==='live'){
-    const cbEl=document.getElementById('cbStat');
-    const cbOk=cbEl&&(cbEl.textContent.includes('CONNECTED')||cbEl.style.color==='var(--green)');
-    if(!cbOk){
-      // Double check via API before blocking
-      fetch(API+'/api/bot/state').then(r=>r.json()).then(s=>{
-        if(!s.cb_connected){alert('Coinbase API not connected. Cannot activate LIVE mode.');}
-        else{_doActivate();}
-      });
-      return;
-    }
+    // Always verify via API for live mode
+    fetch(API+'/api/bot/state').then(r=>r.json()).then(s=>{
+      if(!s.cb_connected){alert('Coinbase API not connected. Cannot activate LIVE mode.');}
+      else{_doActivate();}
+    });
+    return;
     const amount=document.getElementById('cfgAmount').value;
     const unit=currentOrderType.toUpperCase();
     if(!confirm(`⚠️ LIVE MODE\n\nThis will place REAL orders on Coinbase Advanced.\n\nAmount: ${amount} ${unit} per order\nRange: $${lower} – $${upper}\n\nAre you sure?`))return;
@@ -2006,11 +2006,14 @@ function _doActivate(){
   if(currentMode==='live'){
     if(!confirm(`⚠️ LIVE MODE\n\nThis will place REAL orders on Coinbase Advanced.\n\nAmount: ${amount} ${unit} per order\nRange: $${lower} – $${upper}\n\nAre you sure?`))return;
   }
+  const btn=document.getElementById('activateBtn');
+  if(btn){btn.textContent='⏳ ACTIVATING...';btn.style.opacity='0.7';}
   saveConfig();
   setTimeout(()=>{
     fetch(API+'/api/bot/config',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({mode:currentMode})})
     .then(()=>fetch(API+'/api/bot/start',{method:'POST'}))
-    .then(()=>fetchState());
+    .then(()=>fetchState())
+    .then(()=>{showToast('✅ Bot activated!','var(--green)');});
   },600);
 }
 
