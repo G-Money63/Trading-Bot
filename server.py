@@ -2138,6 +2138,13 @@ async function fetchState(){
     const s=await fetch('/api/bot/state',{cache:'no-store'}).then(r=>r.json());
     if(s&&s.portfolio){
       demoMode=false;
+      // Always update CB status directly from API response
+      const cbEl=document.getElementById('cbStat');
+      if(cbEl){
+        cbEl.textContent=s.cb_connected?'CONNECTED ✓':'NOT SET';
+        cbEl.style.color=s.cb_connected?'var(--green)':'var(--red)';
+        cbEl.style.fontWeight='700';
+      }
       renderSignals(s.pending||[]);
       renderGridViz(s);
       renderPortfolio(s.portfolio);
