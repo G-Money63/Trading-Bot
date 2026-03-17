@@ -1325,7 +1325,7 @@ html.dark .demo-banner{background:var(--xrp-light);border-color:rgba(77,142,255,
 </div>
 
 <!-- ══ VERSION BAR ══ -->
-<div class="version-bar">XRP GRID BOT · v2.0 · PAPER MODE · COINBASE ADVANCED + KRAKEN</div>
+<div class="version-bar">XRP GRID BOT · v2.1 · PAPER MODE · COINBASE ADVANCED + KRAKEN</div>
 
 <!-- ══ EXPAND MODALS ══ -->
 <!-- Price Modal -->
@@ -2249,39 +2249,37 @@ async function fetchMarket(){
     }
   }catch(e){setStatus(false,demoMode?'DEMO MODE':'CONNECTING…');}
 }
-async async function fetchState(){
-  try{
-    const s=await fetch('/api/bot/state',{cache:'no-store'}).then(r=>r.json());
-    if(s&&s.portfolio){
-      demoMode=false;
-      window._botRunning = s.running || false;
-      // Always update CB status directly from API response
-      const cbEl=document.getElementById('cbStat');
-      if(cbEl){
-        cbEl.textContent=s.cb_connected?'CONNECTED ✓':'NOT SET';
-        cbEl.style.color=s.cb_connected?'var(--green)':'var(--red)';
-        cbEl.style.fontWeight='700';
-      }
-      renderSignals(s.pending||[]);
-      renderGridViz(s);
-      renderPortfolio(s.portfolio);
-      renderTradeLog(s.trade_log||[]);
-      renderBotStatus(s);
-      if(s.config){
-        document.getElementById('cfgUpper').value=s.config.upper||1.60;
-        document.getElementById('cfgLower').value=s.config.lower||1.20;
-        document.getElementById('cfgLevels').value=s.config.levels||10;
-        const ot=s.config.order_type||'xrp';
+async function fetchState(){
+  fetch('/api/bot/state',{cache:'no-store'})
+  .then(r=>r.json())
+  .then(s=>{
+    if(!s||!s.portfolio)return;
+    demoMode=false;
+    window._botRunning = s.running || false;
+    const cbEl=document.getElementById('cbStat');
+    if(cbEl){
+      cbEl.textContent=s.cb_connected?'CONNECTED ✓':'NOT SET';
+      cbEl.style.color=s.cb_connected?'var(--green)':'var(--red)';
+      cbEl.style.fontWeight='700';
+    }
+    renderSignals(s.pending||[]);
+    renderGridViz(s);
+    renderPortfolio(s.portfolio);
+    renderTradeLog(s.trade_log||[]);
+    renderBotStatus(s);
+    if(s.config){
+      document.getElementById('cfgUpper').value=s.config.upper||1.60;
+      document.getElementById('cfgLower').value=s.config.lower||1.20;
+      document.getElementById('cfgLevels').value=s.config.levels||10;
+      const ot=s.config.order_type||'xrp';
       currentOrderType=ot;
       setOrderType(ot);
       document.getElementById('cfgAmount').value=ot==='xrp'?(s.config.amount_xrp||10):(s.config.amount_usd||50);
       updateActivateBtn();
-        document.getElementById('cfgStop').value=s.config.stop_loss_pct||5;
-        document.getElementById('cfgTP').value=s.config.take_profit_pct||15;
-      }
-      return s;
+      document.getElementById('cfgStop').value=s.config.stop_loss_pct||5;
+      document.getElementById('cfgTP').value=s.config.take_profit_pct||15;
     }
-  }catch(e){}
+  }).catch(e=>console.error('fetchState error:',e));
 }
 
 // ── Range selector ──
