@@ -1091,7 +1091,7 @@ html.dark .demo-banner{background:var(--xrp-light);border-color:rgba(77,142,255,
       </div>
     </div>
     <div class="tile" id="tile-bull" onclick="expandTile('bull')">
-      <div class="tile-label">BULL SCORE <span class="tile-expand">↗</span> <span onclick="event.stopPropagation();showBullPopup()" style="cursor:pointer;font-size:12px;opacity:.6;margin-left:4px">❓</span></div>
+      <div class="tile-label">BULL SCORE <span class="tile-expand">↗</span> <span onclick="event.stopPropagation();showBullPopup()" style="cursor:pointer;font-size:10px;font-weight:700;color:var(--xrp);border:1.5px solid var(--xrp);border-radius:50%;width:16px;height:16px;display:inline-flex;align-items:center;justify-content:center;margin-left:6px;opacity:.7">?</span></div>
       <div class="tile-val" id="tileBull">—</div>
       <div class="tile-sub">Composite [0–1]</div>
     </div>
@@ -1335,7 +1335,7 @@ html.dark .demo-banner{background:var(--xrp-light);border-color:rgba(77,142,255,
 </div>
 
 <!-- ══ VERSION BAR ══ -->
-<div class="version-bar">XRP GRID BOT · v2.8 · PAPER MODE · COINBASE ADVANCED + KRAKEN</div>
+<div class="version-bar">XRP GRID BOT · v2.9 · PAPER MODE · COINBASE ADVANCED + KRAKEN</div>
 
 <!-- ══ BULL SCORE POPUP ══ -->
 <div id="bullPopup" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.6);z-index:1000;padding:20px;overflow-y:auto" onclick="hideBullPopup()">
