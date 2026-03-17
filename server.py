@@ -1265,7 +1265,10 @@ html.dark .demo-banner{background:var(--xrp-light);border-color:rgba(77,142,255,
       ▶ ACTIVATE BOT
     </button>
     <div id="activateSummary" style="font-size:11px;color:var(--muted);text-align:center;margin-top:8px">Fill in all fields to activate</div>
-    <button onclick="resetGridFields()" style="width:100%;margin-top:8px;padding:10px;border-radius:8px;border:1.5px solid var(--border2);background:none;color:var(--muted);font-family:var(--fh);font-size:11px;font-weight:600;cursor:pointer">🔄 RESET FIELDS</button>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px">
+      <button onclick="updateGridConfig()" style="padding:10px;border-radius:8px;border:1.5px solid var(--xrp);background:none;color:var(--xrp);font-family:var(--fh);font-size:11px;font-weight:700;cursor:pointer">💾 UPDATE CONFIG</button>
+      <button onclick="resetGridFields()" style="padding:10px;border-radius:8px;border:1.5px solid var(--border2);background:none;color:var(--muted);font-family:var(--fh);font-size:11px;font-weight:600;cursor:pointer">🔄 RESET FIELDS</button>
+    </div>
 
     <!-- Bot status (shown when running) -->
     <div id="botStatusRow" style="display:none;margin-top:12px">
@@ -1322,7 +1325,7 @@ html.dark .demo-banner{background:var(--xrp-light);border-color:rgba(77,142,255,
 </div>
 
 <!-- ══ VERSION BAR ══ -->
-<div class="version-bar">XRP GRID BOT · v1.7 · PAPER MODE · COINBASE ADVANCED + KRAKEN</div>
+<div class="version-bar">XRP GRID BOT · v1.9 · PAPER MODE · COINBASE ADVANCED + KRAKEN</div>
 
 <!-- ══ EXPAND MODALS ══ -->
 <!-- Price Modal -->
@@ -1788,7 +1791,8 @@ function renderSignals(signals){
   const badge=document.getElementById('pendingBadge');
   if(!signals||!signals.length){
     badge.style.display='none';
-    const botRunning = document.getElementById('botToggle') && document.getElementById('botToggle').checked;
+    // Check bot running state from last fetched state
+    const botRunning = window._botRunning || false;
     el.innerHTML=`<div class="no-signals"><div class="spinner"></div><div class="no-sig-txt">${botRunning ? 'Watching grid levels… signals appear when price crosses a level.' : 'Bot is stopped. Go to the ⚙️ Grid tab and turn the bot on to start watching.'}</div></div>`;
     return;
   }
@@ -1981,6 +1985,28 @@ function setMode(m){
 
 let currentMode='paper';
 
+function updateGridConfig(){
+  const price=lastSnap?.mid_price||1.50;
+  const amount=parseFloat(document.getElementById('cfgAmount').value)||10;
+  const cfg={
+    upper:+document.getElementById('cfgUpper').value||1.55,
+    lower:+document.getElementById('cfgLower').value||1.45,
+    levels:+document.getElementById('cfgLevels').value||10,
+    amount_usd:currentOrderType==='usd'?amount:amount*price,
+    amount_xrp:currentOrderType==='xrp'?amount:Math.round(amount/price*10)/10,
+    order_type:currentOrderType,
+    stop_loss_pct:+document.getElementById('cfgStop').value||5,
+    take_profit_pct:+document.getElementById('cfgTP').value||15
+  };
+  fetch(API+'/api/bot/config',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({config:cfg})})
+  .then(r=>r.json())
+  .then(s=>{
+    if(s.ok){showToast('✅ Config updated!','var(--green)');}
+    else{showToast('❌ Update failed','var(--red)');}
+    fetchState();
+  }).catch(e=>showToast('❌ '+e.message,'var(--red)'));
+}
+
 function resetGridFields(){
   document.getElementById('cfgLower').value='';
   document.getElementById('cfgUpper').value='';
@@ -2095,7 +2121,20 @@ function _doActivate(){
 }
 
 function deactivateBot(){
-  fetch(API+'/api/bot/stop',{method:'POST'}).then(()=>fetchState());
+  fetch(API+'/api/bot/stop',{method:'POST'})
+  .then(r=>r.json())
+  .then(s=>{
+    window._botRunning=false;
+    // Immediately update UI
+    const row=document.getElementById('botStatusRow');
+    const btn=document.getElementById('activateBtn');
+    const summaryEl=document.getElementById('activateSummary');
+    if(row)row.style.display='none';
+    if(btn)btn.style.display='block';
+    if(summaryEl)summaryEl.style.display='block';
+    showToast('⏹ Bot stopped','var(--red)');
+    setTimeout(()=>fetchState(),500);
+  }).catch(e=>showToast('❌ '+e.message,'var(--red)'));
 }
 
 let currentOrderType='xrp';
@@ -2215,6 +2254,7 @@ async function fetchState(){
     const s=await fetch('/api/bot/state',{cache:'no-store'}).then(r=>r.json());
     if(s&&s.portfolio){
       demoMode=false;
+      window._botRunning = s.running || false;
       // Always update CB status directly from API response
       const cbEl=document.getElementById('cbStat');
       if(cbEl){
