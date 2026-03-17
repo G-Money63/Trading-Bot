@@ -1310,7 +1310,7 @@ html.dark .demo-banner{background:var(--xrp-light);border-color:rgba(77,142,255,
 </div>
 
 <!-- ══ VERSION BAR ══ -->
-<div class="version-bar">XRP GRID BOT · v1.4 · PAPER MODE · COINBASE ADVANCED + KRAKEN</div>
+<div class="version-bar">XRP GRID BOT · v1.5 · PAPER MODE · COINBASE ADVANCED + KRAKEN</div>
 
 <!-- ══ EXPAND MODALS ══ -->
 <!-- Price Modal -->
@@ -2014,17 +2014,13 @@ function activateBot(){
   const upper=parseFloat(document.getElementById('cfgUpper')?.value||0);
   if(!lower||!upper||upper<=lower){alert('Please set a valid price range first.');return;}
   if(currentMode==='live'){
-    // Always verify via API for live mode
     fetch(API+'/api/bot/state').then(r=>r.json()).then(s=>{
       if(!s.cb_connected){alert('Coinbase API not connected. Cannot activate LIVE mode.');}
       else{_doActivate();}
     });
-    return;
-    const amount=document.getElementById('cfgAmount').value;
-    const unit=currentOrderType.toUpperCase();
-    if(!confirm(`⚠️ LIVE MODE\n\nThis will place REAL orders on Coinbase Advanced.\n\nAmount: ${amount} ${unit} per order\nRange: $${lower} – $${upper}\n\nAre you sure?`))return;
+  } else {
+    _doActivate();
   }
-  _doActivate();
 }
 
 function _doActivate(){
