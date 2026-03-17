@@ -77,6 +77,7 @@ grid = {
         "levels":        int(os.environ.get("GRID_LEVELS", 10)),
         "amount_usd":    float(os.environ.get("GRID_AMOUNT", 50)),
         "order_type":    os.environ.get("GRID_ORDER_TYPE", "usd"),  # "usd" or "xrp"
+        "signal_direction": "both",  # "both", "buy", "sell"
         "amount_xrp":    float(os.environ.get("GRID_AMOUNT_XRP", 35)),
         "stop_loss_pct": 5.0,
         "take_profit_pct": 15.0,
@@ -272,18 +273,19 @@ def run_grid_tick(snap):
                           if p["status"] != "pending" or 
                           (now_ts - _t.mktime(_t.strptime(p["ts"][:19], "%Y-%m-%dT%H:%M:%S"))) < 300]
         already_pending_sides = {p["side"] for p in grid["pending"] if p["status"] == "pending"}
+        direction = cfg.get("signal_direction","both")
         already_bought  = band in grid["buy_orders"]
         already_sold    = band in grid["sell_orders"]
 
         # Price dropped into this band → BUY opportunity at the lower line
-        if moved_down and not already_bought and "BUY" not in already_pending_sides:
+        if moved_down and not already_bought and "BUY" not in already_pending_sides and direction in ("both","buy"):
             buy_price = lines[band]         # bottom of this band
             sig = make_signal("BUY", buy_price, band, lines[band], lines[band+1], snap)
             grid["pending"].append(sig)
             log.info(f"BUY signal queued: level {band+1}  @${buy_price:.5f}  conf={sig['confidence']}")
 
         # Price rose into this band → SELL opportunity at the upper line
-        if moved_up and pf["xrp_held"] > 0 and not already_sold and "SELL" not in already_pending_sides:
+        if moved_up and pf["xrp_held"] > 0 and not already_sold and "SELL" not in already_pending_sides and direction in ("both","sell"):
             sell_price = lines[band + 1]    # top of this band
             sig = make_signal("SELL", sell_price, band, lines[band], lines[band+1], snap)
             grid["pending"].append(sig)
@@ -1248,6 +1250,14 @@ html.dark .demo-banner{background:var(--xrp-light);border-color:rgba(77,142,255,
       <div class="inp-group"><div class="inp-label">Take Profit (%)</div><input class="inp" id="cfgTP" type="number" step="0.5" placeholder="e.g. 15%" value="15"/></div>
     </div>
 
+    <!-- Section 3b: Direction -->
+    <div class="ptitle">SIGNAL DIRECTION</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:16px">
+      <button id="dirBoth" onclick="setDirection('both')" style="padding:10px;border-radius:8px;border:2px solid var(--xrp);background:rgba(0,51,173,.08);font-family:var(--fh);font-size:10px;font-weight:700;color:var(--xrp);cursor:pointer">⚡ BOTH</button>
+      <button id="dirBuy" onclick="setDirection('buy')" style="padding:10px;border-radius:8px;border:2px solid var(--border2);background:var(--panel);font-family:var(--fh);font-size:10px;font-weight:700;color:var(--muted);cursor:pointer">🟢 BUY ONLY</button>
+      <button id="dirSell" onclick="setDirection('sell')" style="padding:10px;border-radius:8px;border:2px solid var(--border2);background:var(--panel);font-family:var(--fh);font-size:10px;font-weight:700;color:var(--muted);cursor:pointer">🔴 SELL ONLY</button>
+    </div>
+
     <!-- Section 4: Mode -->
     <div class="ptitle">MODE</div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:16px">
@@ -1325,7 +1335,7 @@ html.dark .demo-banner{background:var(--xrp-light);border-color:rgba(77,142,255,
 </div>
 
 <!-- ══ VERSION BAR ══ -->
-<div class="version-bar">XRP GRID BOT · v2.4 · PAPER MODE · COINBASE ADVANCED + KRAKEN</div>
+<div class="version-bar">XRP GRID BOT · v2.5 · PAPER MODE · COINBASE ADVANCED + KRAKEN</div>
 
 <!-- ══ EXPAND MODALS ══ -->
 <!-- Price Modal -->
@@ -1888,8 +1898,7 @@ function renderGridViz(state){
 }
 
 function renderPortfolio(pf){
-  console.log('renderPortfolio called with:', JSON.stringify(pf));
-  if(!pf){console.log('pf is null/undefined');return;}
+  if(!pf)return;
   const pfCash=document.getElementById('pfCash');
   if(pfCash)pfCash.textContent=fmtU(pf.cash_usd);
   const pfXrp=document.getElementById('pfXrp');
@@ -1989,6 +1998,21 @@ function setMode(m){
 }
 
 let currentMode='paper';
+let currentDirection='both';
+function setDirection(d){
+  currentDirection=d;
+  ['dirBoth','dirBuy','dirSell'].forEach(id=>{
+    const btn=document.getElementById(id);
+    if(!btn)return;
+    const key=id.replace('dir','').toLowerCase();
+    const isActive=key===d;
+    const color=d==='buy'?'var(--green)':d==='sell'?'var(--red)':'var(--xrp)';
+    btn.style.borderColor=isActive?color:'var(--border2)';
+    btn.style.color=isActive?color:'var(--muted)';
+    btn.style.background=isActive?`rgba(${d==='buy'?'0,135,90':d==='sell'?'220,38,38':'0,51,173'},.08)`:'var(--panel)';
+  });
+  fetch(API+'/api/bot/config',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({config:{signal_direction:d}})}).catch(()=>{});
+}
 
 function updateGridConfig(){
   const price=lastSnap?.mid_price||1.50;
