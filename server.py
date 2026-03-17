@@ -631,11 +631,11 @@ def compute_snapshot(books):
         momentum_sentiment * 0.20 +
         obi_trend_sentiment * 0.10, 1
     )
-    if   token_sentiment >= 75: ts_label = "Extreme Greed"
-    elif token_sentiment >= 55: ts_label = "Greed"
+    if   token_sentiment >= 75: ts_label = "Strongly Bullish"
+    elif token_sentiment >= 55: ts_label = "Bullish"
     elif token_sentiment >= 45: ts_label = "Neutral"
-    elif token_sentiment >= 25: ts_label = "Fear"
-    else:                       ts_label = "Extreme Fear"
+    elif token_sentiment >= 25: ts_label = "Bearish"
+    else:                       ts_label = "Strongly Bearish"
     ts_color = ("#00875a" if token_sentiment >= 75 else "#22c55e" if token_sentiment >= 55
                 else "#eab308" if token_sentiment >= 45 else "#f97316" if token_sentiment >= 25
                 else "#dc2626")
@@ -932,7 +932,7 @@ html.dark .gauge-track{background:linear-gradient(90deg,rgba(255,68,102,.2),var(
 /* ══ PORTFOLIO ══ */
 .pnl-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
 @media(max-width:420px){.pnl-grid{grid-template-columns:1fr 1fr}}
-.pnl-c{background:var(--bg);border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px;text-align:center}
+.pnl-c{background:var(--bg);border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px;text-align:center;justify-content:center;min-height:60px}
 .pnl-label{font-family:var(--fh);font-size:11px;letter-spacing:.5px;color:var(--muted);margin-bottom:5px;font-weight:600;text-transform:uppercase}
 .pnl-val{font-size:20px;font-weight:700;font-family:var(--fh)}
 
@@ -1105,11 +1105,11 @@ html.dark .demo-banner{background:var(--xrp-light);border-color:rgba(77,142,255,
         <div id="fngThumb" style="position:absolute;top:50%;transform:translate(-50%,-50%);width:14px;height:20px;background:var(--text);border-radius:3px;transition:left .5s ease;left:50%"></div>
       </div>
       <div style="display:flex;justify-content:space-between;font-size:9px;color:var(--muted);font-weight:600;margin-top:4px">
-        <span style="color:#dc2626">Extreme Fear</span>
-        <span>Fear</span>
+        <span style="color:#dc2626">Strongly Bearish</span>
+        <span>Bearish</span>
         <span>Neutral</span>
-        <span>Greed</span>
-        <span style="color:#00875a">Extreme Greed</span>
+        <span>Bullish</span>
+        <span style="color:#00875a">Strongly Bullish</span>
       </div>
     </div>
     <!-- Component breakdown -->
@@ -1210,16 +1210,16 @@ html.dark .demo-banner{background:var(--xrp-light);border-color:rgba(77,142,255,
     <!-- Section 1: Price Range -->
     <div class="ptitle">PRICE RANGE</div>
     <div class="cfg-grid" style="margin-bottom:16px">
-      <div class="inp-group"><div class="inp-label">Lower Price (USD)</div><input class="inp" id="cfgLower" type="number" step="0.01" value="1.35" oninput="updateActivateBtn()"/></div>
-      <div class="inp-group"><div class="inp-label">Upper Price (USD)</div><input class="inp" id="cfgUpper" type="number" step="0.01" value="1.50" oninput="updateActivateBtn()"/></div>
-      <div class="inp-group"><div class="inp-label">Grid Levels</div><input class="inp" id="cfgLevels" type="number" step="1" min="2" max="50" value="10" oninput="updateActivateBtn()"/></div>
+      <div class="inp-group"><div class="inp-label">Lower Price (USD)</div><input class="inp" id="cfgLower" type="number" step="0.01" placeholder="e.g. 1.35" value="1.35" oninput="updateActivateBtn()"/></div>
+      <div class="inp-group"><div class="inp-label">Upper Price (USD)</div><input class="inp" id="cfgUpper" type="number" step="0.01" placeholder="e.g. 1.55" value="1.50" oninput="updateActivateBtn()"/></div>
+      <div class="inp-group"><div class="inp-label">Grid Levels</div><input class="inp" id="cfgLevels" type="number" step="1" min="2" max="50" placeholder="e.g. 10" value="10" oninput="updateActivateBtn()"/></div>
     </div>
 
     <!-- Section 2: Order Size -->
     <div class="ptitle">ORDER SIZE</div>
     <div style="display:flex;gap:8px;align-items:center;margin-bottom:16px">
       <div style="flex:1;position:relative">
-        <input class="inp" id="cfgAmount" type="number" step="1" min="1" value="10" oninput="updateActivateBtn()"/>
+        <input class="inp" id="cfgAmount" type="number" step="1" min="1" placeholder="e.g. 10" value="10" oninput="updateActivateBtn()"/>
         <span id="cfgAmountUnit" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);font-size:13px;color:var(--muted);font-weight:600;pointer-events:none">XRP</span>
       </div>
       <div style="display:flex;border:1.5px solid var(--border2);border-radius:8px;overflow:hidden;flex-shrink:0">
@@ -1231,8 +1231,8 @@ html.dark .demo-banner{background:var(--xrp-light);border-color:rgba(77,142,255,
     <!-- Section 3: Stop/TP -->
     <div class="ptitle">RISK SETTINGS</div>
     <div class="cfg-grid" style="margin-bottom:16px">
-      <div class="inp-group"><div class="inp-label">Stop Loss (%)</div><input class="inp" id="cfgStop" type="number" step="0.5" value="5"/></div>
-      <div class="inp-group"><div class="inp-label">Take Profit (%)</div><input class="inp" id="cfgTP" type="number" step="0.5" value="15"/></div>
+      <div class="inp-group"><div class="inp-label">Stop Loss (%)</div><input class="inp" id="cfgStop" type="number" step="0.5" placeholder="e.g. 5%" value="5"/></div>
+      <div class="inp-group"><div class="inp-label">Take Profit (%)</div><input class="inp" id="cfgTP" type="number" step="0.5" placeholder="e.g. 15%" value="15"/></div>
     </div>
 
     <!-- Section 4: Mode -->
@@ -1861,10 +1861,14 @@ function renderGridViz(state){
 
 function renderPortfolio(pf){
   if(!pf)return;
-  document.getElementById('pfCash').textContent=fmtU(pf.cash_usd);
-  document.getElementById('pfXrp').textContent=fmt(pf.xrp_held,4)+' XRP';
-  document.getElementById('pfXrpVal').textContent=fmtU(pf.xrp_value_usd);
-  document.getElementById('pfTotal').textContent=fmtU(pf.total_value);
+  const pfCash=document.getElementById('pfCash');
+  if(pfCash)pfCash.textContent=fmtU(pf.cash_usd);
+  const pfXrp=document.getElementById('pfXrp');
+  if(pfXrp)pfXrp.textContent=fmt(pf.xrp_held,4)+' XRP';
+  const pfXrpVal=document.getElementById('pfXrpVal');
+  if(pfXrpVal)pfXrpVal.textContent=fmtU(pf.xrp_value_usd);
+  const pfTotal=document.getElementById('pfTotal');
+  if(pfTotal)pfTotal.textContent=fmtU(pf.total_value);
   const ur=pf.unrealized_pnl,re=pf.realized_pnl;
   document.getElementById('pfUnreal').textContent=(ur>=0?'+':'')+fmtU(ur);document.getElementById('pfUnreal').style.color=pColor(ur);
   document.getElementById('pfReal').textContent=(re>=0?'+':'')+fmtU(re);document.getElementById('pfReal').style.color=pColor(re);
@@ -2007,14 +2011,38 @@ function _doActivate(){
     if(!confirm(`⚠️ LIVE MODE\n\nThis will place REAL orders on Coinbase Advanced.\n\nAmount: ${amount} ${unit} per order\nRange: $${lower} – $${upper}\n\nAre you sure?`))return;
   }
   const btn=document.getElementById('activateBtn');
-  if(btn){btn.textContent='⏳ ACTIVATING...';btn.style.opacity='0.7';}
-  saveConfig();
-  setTimeout(()=>{
-    fetch(API+'/api/bot/config',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({mode:currentMode})})
-    .then(()=>fetch(API+'/api/bot/start',{method:'POST'}))
-    .then(()=>fetchState())
-    .then(()=>{showToast('✅ Bot activated!','var(--green)');});
-  },600);
+  if(btn){btn.textContent='⏳ ACTIVATING...';btn.style.opacity='0.7';btn.disabled=true;}
+  // Set a timeout to reset button if something goes wrong
+  const resetBtn=()=>{
+    if(btn){btn.textContent=`▶ ACTIVATE BOT · ${currentMode==='live'?'🔴 LIVE MODE':'📝 PAPER MODE'}`;btn.style.opacity='1';btn.disabled=false;}
+  };
+  const timeout=setTimeout(()=>{resetBtn();showToast('⚠️ Activation timed out','var(--yellow)');},8000);
+  Promise.all([
+    fetch(API+'/api/bot/config',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({mode:currentMode,config:{
+      upper:+document.getElementById('cfgUpper').value,
+      lower:+document.getElementById('cfgLower').value,
+      levels:+document.getElementById('cfgLevels').value,
+      amount_usd:currentOrderType==='usd'?+amount:+amount*1.5,
+      amount_xrp:currentOrderType==='xrp'?+amount:Math.round(+amount/1.5*10)/10,
+      order_type:currentOrderType,
+      stop_loss_pct:+document.getElementById('cfgStop').value||5,
+      take_profit_pct:+document.getElementById('cfgTP').value||15
+    }})}).then(r=>r.json()),
+    fetch(API+'/api/bot/start',{method:'POST'}).then(r=>r.json())
+  ]).then(([cfg,start])=>{
+    clearTimeout(timeout);
+    if(cfg.ok&&start.ok){
+      showToast('✅ Bot activated!','var(--green)');
+      fetchState();
+    } else {
+      showToast('❌ Activation failed','var(--red)');
+      resetBtn();
+    }
+  }).catch(e=>{
+    clearTimeout(timeout);
+    showToast('❌ '+e.message,'var(--red)');
+    resetBtn();
+  });
 }
 
 function deactivateBot(){
