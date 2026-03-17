@@ -1287,7 +1287,7 @@ html.dark .demo-banner{background:var(--xrp-light);border-color:rgba(77,142,255,
   <!-- Grid visualization -->
   <div class="panel">
     <div class="ptitle">GRID LEVELS</div>
-    <div id="gridViz" style="display:flex;align-items:center;justify-content:center;height:100px;color:var(--muted);font-size:13px">Configure grid above</div>
+    <div id="gridViz" style="position:relative;height:200px;overflow:hidden;border-radius:8px;background:var(--bg);border:1px solid var(--border)"><div style="display:flex;align-items:center;justify-content:center;height:100%;color:var(--muted);font-size:13px">Configure grid above</div></div>
   </div>
 </div>
 
@@ -1325,7 +1325,7 @@ html.dark .demo-banner{background:var(--xrp-light);border-color:rgba(77,142,255,
 </div>
 
 <!-- ══ VERSION BAR ══ -->
-<div class="version-bar">XRP GRID BOT · v2.3 · PAPER MODE · COINBASE ADVANCED + KRAKEN</div>
+<div class="version-bar">XRP GRID BOT · v2.4 · PAPER MODE · COINBASE ADVANCED + KRAKEN</div>
 
 <!-- ══ EXPAND MODALS ══ -->
 <!-- Price Modal -->
@@ -1864,6 +1864,9 @@ function renderSignals(signals){
 
 function renderGridViz(state){
   const el=document.getElementById('gridViz');
+  if(!el)return;
+  el.style.position='relative';
+  el.style.overflow='hidden';
   const lines=state.grid_lines||[];
   if(!lines.length){el.innerHTML='<div style="display:flex;align-items:center;justify-content:center;height:100%;color:var(--muted);font-size:13px">Configure grid above</div>';return;}
   const prices=lines.map(l=>l.price);
