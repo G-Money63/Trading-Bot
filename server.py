@@ -93,13 +93,13 @@ grid = {
     "trade_log":     deque(maxlen=200),
     # Portfolio
     "portfolio": {
-        "cash_usd":        1000.0,
-        "xrp_held":        0.0,
-        "avg_entry":       0.0,
+        "cash_usd":        float(os.environ.get("PORTFOLIO_CASH", 1000.0)),
+        "xrp_held":        float(os.environ.get("PORTFOLIO_XRP", 0.0)),
+        "avg_entry":       float(os.environ.get("PORTFOLIO_AVG", 0.0)),
         "realized_pnl":    0.0,
         "open_orders":     [],
-        "last_sell_price": 0.0,
-        "last_buy_price":  0.0,
+        "last_sell_price": float(os.environ.get("PORTFOLIO_LAST_SELL", 0.0)),
+        "last_buy_price":  float(os.environ.get("PORTFOLIO_LAST_BUY", 0.0)),
     },
     "last_checked_band": -1,
 }
@@ -1335,7 +1335,7 @@ html.dark .demo-banner{background:var(--xrp-light);border-color:rgba(77,142,255,
 </div>
 
 <!-- ══ VERSION BAR ══ -->
-<div class="version-bar">XRP GRID BOT · v2.5 · PAPER MODE · COINBASE ADVANCED + KRAKEN</div>
+<div class="version-bar">XRP GRID BOT · v2.6 · PAPER MODE · COINBASE ADVANCED + KRAKEN</div>
 
 <!-- ══ EXPAND MODALS ══ -->
 <!-- Price Modal -->
