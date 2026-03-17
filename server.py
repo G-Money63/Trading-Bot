@@ -942,11 +942,11 @@ html.dark .gauge-track{background:linear-gradient(90deg,rgba(255,68,102,.2),var(
 .gauge-labels{display:flex;justify-content:space-between;font-size:13px;font-weight:600;margin-top:6px}
 
 /* ══ PORTFOLIO ══ */
-.pnl-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
-@media(max-width:420px){.pnl-grid{grid-template-columns:1fr 1fr}}
+.pnl-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-bottom:8px}
+@media(max-width:420px){}
 .pnl-c{background:var(--bg);border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px;text-align:center;justify-content:center;min-height:60px}
-.pnl-label{font-family:var(--fh);font-size:11px;letter-spacing:.5px;color:var(--muted);margin-bottom:5px;font-weight:600;text-transform:uppercase}
-.pnl-val{font-size:20px;font-weight:700;font-family:var(--fh)}
+.pnl-label{font-family:var(--fh);font-size:11px;letter-spacing:.5px;color:var(--muted);margin-bottom:4px;font-weight:600;text-transform:uppercase;display:block}
+.pnl-val{font-size:20px;font-weight:700;font-family:var(--fh);color:var(--text);display:block;margin-top:4px}
 
 /* ══ TRADE LOG ══ */
 .tlog{max-height:240px;overflow-y:auto}
@@ -1325,7 +1325,7 @@ html.dark .demo-banner{background:var(--xrp-light);border-color:rgba(77,142,255,
 </div>
 
 <!-- ══ VERSION BAR ══ -->
-<div class="version-bar">XRP GRID BOT · v2.1 · PAPER MODE · COINBASE ADVANCED + KRAKEN</div>
+<div class="version-bar">XRP GRID BOT · v2.2 · PAPER MODE · COINBASE ADVANCED + KRAKEN</div>
 
 <!-- ══ EXPAND MODALS ══ -->
 <!-- Price Modal -->
