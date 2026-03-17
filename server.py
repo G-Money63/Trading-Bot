@@ -1091,7 +1091,7 @@ html.dark .demo-banner{background:var(--xrp-light);border-color:rgba(77,142,255,
       </div>
     </div>
     <div class="tile" id="tile-bull" onclick="expandTile('bull')">
-      <div class="tile-label">BULL SCORE <span class="tile-expand">↗</span></div>
+      <div class="tile-label">BULL SCORE <span class="tile-expand">↗</span> <span onclick="event.stopPropagation();showBullPopup()" style="cursor:pointer;font-size:12px;opacity:.6;margin-left:4px">❓</span></div>
       <div class="tile-val" id="tileBull">—</div>
       <div class="tile-sub">Composite [0–1]</div>
     </div>
@@ -1335,7 +1335,79 @@ html.dark .demo-banner{background:var(--xrp-light);border-color:rgba(77,142,255,
 </div>
 
 <!-- ══ VERSION BAR ══ -->
-<div class="version-bar">XRP GRID BOT · v2.6 · PAPER MODE · COINBASE ADVANCED + KRAKEN</div>
+<div class="version-bar">XRP GRID BOT · v2.8 · PAPER MODE · COINBASE ADVANCED + KRAKEN</div>
+
+<!-- ══ BULL SCORE POPUP ══ -->
+<div id="bullPopup" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.6);z-index:1000;padding:20px;overflow-y:auto" onclick="hideBullPopup()">
+  <div style="background:var(--panel);border-radius:16px;padding:20px;max-width:480px;margin:40px auto" onclick="event.stopPropagation()">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+      <div style="font-family:var(--fh);font-size:14px;font-weight:700;color:var(--xrp);letter-spacing:1px">BULL SCORE EXPLAINED</div>
+      <button onclick="hideBullPopup()" style="background:none;border:none;font-size:20px;cursor:pointer;color:var(--muted)">✕</button>
+    </div>
+
+    <!-- Live score display -->
+    <div style="text-align:center;padding:16px;background:var(--bg);border:1px solid var(--border);border-radius:10px;margin-bottom:16px">
+      <div style="font-size:11px;color:var(--muted);letter-spacing:1px;margin-bottom:6px">CURRENT BULL SCORE</div>
+      <div id="bullPopupScore" style="font-size:48px;font-weight:800;font-family:var(--fh);color:var(--xrp)">—</div>
+      <div id="bullPopupLabel" style="font-size:13px;color:var(--muted);margin-top:4px">out of 1.0</div>
+    </div>
+
+    <!-- Component breakdown -->
+    <div style="font-size:11px;font-weight:700;color:var(--muted);letter-spacing:1px;margin-bottom:10px">SCORE COMPONENTS</div>
+    <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:16px">
+      <div>
+        <div style="display:flex;justify-content:space-between;margin-bottom:4px">
+          <span style="font-size:12px;color:var(--text);font-weight:600">Order Book (OBI) <span style="color:var(--muted);font-weight:400">50%</span></span>
+          <span id="bullObiVal" style="font-size:12px;font-weight:700;color:var(--xrp)">—</span>
+        </div>
+        <div style="height:6px;background:var(--border);border-radius:3px;overflow:hidden">
+          <div id="bullObiBar" style="height:100%;width:50%;background:var(--xrp);border-radius:3px;transition:width .5s"></div>
+        </div>
+        <div style="font-size:11px;color:var(--muted);margin-top:3px">Ratio of buy vs sell orders in the live order book</div>
+      </div>
+      <div>
+        <div style="display:flex;justify-content:space-between;margin-bottom:4px">
+          <span style="font-size:12px;color:var(--text);font-weight:600">Depth Ratio <span style="color:var(--muted);font-weight:400">30%</span></span>
+          <span id="bullDepthVal" style="font-size:12px;font-weight:700;color:var(--xrp)">—</span>
+        </div>
+        <div style="height:6px;background:var(--border);border-radius:3px;overflow:hidden">
+          <div id="bullDepthBar" style="height:100%;width:50%;background:var(--xrp);border-radius:3px;transition:width .5s"></div>
+        </div>
+        <div style="font-size:11px;color:var(--muted);margin-top:3px">Bid depth vs ask depth within 1% of current price</div>
+      </div>
+      <div>
+        <div style="display:flex;justify-content:space-between;margin-bottom:4px">
+          <span style="font-size:12px;color:var(--text);font-weight:600">Spread Score <span style="color:var(--muted);font-weight:400">20%</span></span>
+          <span id="bullSpreadVal" style="font-size:12px;font-weight:700;color:var(--xrp)">—</span>
+        </div>
+        <div style="height:6px;background:var(--border);border-radius:3px;overflow:hidden">
+          <div id="bullSpreadBar" style="height:100%;width:50%;background:var(--xrp);border-radius:3px;transition:width .5s"></div>
+        </div>
+        <div style="font-size:11px;color:var(--muted);margin-top:3px">Tight spread = healthy market. Inverse scaled so tight = high score</div>
+      </div>
+    </div>
+
+    <!-- Formula -->
+    <div style="background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:12px;margin-bottom:14px">
+      <div style="font-size:10px;font-weight:700;color:var(--muted);letter-spacing:1px;margin-bottom:6px">FORMULA</div>
+      <div style="font-family:'Courier New',monospace;font-size:12px;color:var(--text);line-height:1.8">
+        Bull Score =<br>
+        &nbsp;&nbsp;(OBI_scaled × 50%) +<br>
+        &nbsp;&nbsp;(Depth_scaled × 30%) +<br>
+        &nbsp;&nbsp;(1 − Spread_scaled × 20%)
+      </div>
+    </div>
+
+    <!-- Interpretation -->
+    <div style="font-size:11px;font-weight:700;color:var(--muted);letter-spacing:1px;margin-bottom:8px">HOW TO READ IT</div>
+    <div style="display:flex;flex-direction:column;gap:6px">
+      <div style="display:flex;align-items:center;gap:10px"><div style="width:40px;text-align:center;font-size:12px;font-weight:700;color:#00875a">0.7+</div><div style="font-size:12px;color:var(--muted)">Strong buying pressure — HIGH conviction signals</div></div>
+      <div style="display:flex;align-items:center;gap:10px"><div style="width:40px;text-align:center;font-size:12px;font-weight:700;color:#22c55e">0.5+</div><div style="font-size:12px;color:var(--muted)">Moderate bullish — MEDIUM conviction signals</div></div>
+      <div style="display:flex;align-items:center;gap:10px"><div style="width:40px;text-align:center;font-size:12px;font-weight:700;color:#eab308">0.4+</div><div style="font-size:12px;color:var(--muted)">Neutral market — LOW conviction signals</div></div>
+      <div style="display:flex;align-items:center;gap:10px"><div style="width:40px;text-align:center;font-size:12px;font-weight:700;color:#dc2626">&lt;0.4</div><div style="font-size:12px;color:var(--muted)">Bearish pressure — signals may be risky</div></div>
+    </div>
+  </div>
+</div>
 
 <!-- ══ EXPAND MODALS ══ -->
 <!-- Price Modal -->
@@ -1952,6 +2024,12 @@ function renderTradeLog(trades){
 function renderBotStatus(s){
   if(!s)return;
   if(s.mode&&s.mode!==currentMode){currentMode=s.mode;setMode(s.mode);}
+  // Restore direction from localStorage
+  const savedDir=localStorage.getItem('gridDirection')||'both';
+  if(savedDir!==currentDirection){currentDirection=savedDir;setDirection(savedDir);}
+  // Restore mode from localStorage
+  const savedMode=localStorage.getItem('gridMode')||'paper';
+  if(s.mode)localStorage.setItem('gridMode',s.mode);
   // Activate button vs status row
   const row=document.getElementById('botStatusRow');
   const btn=document.getElementById('activateBtn');
@@ -1972,9 +2050,11 @@ function renderBotStatus(s){
     cb.style.fontWeight='700';
   }
   if(s.config){
-    document.getElementById('cfgUpper').value=s.config.upper||1.50;
-    document.getElementById('cfgLower').value=s.config.lower||1.35;
-    document.getElementById('cfgLevels').value=s.config.levels||10;
+    // Load from server first, fallback to localStorage
+    const savedCfg=JSON.parse(localStorage.getItem('gridConfig')||'null');
+    document.getElementById('cfgUpper').value=s.config.upper||(savedCfg?.upper)||1.50;
+    document.getElementById('cfgLower').value=s.config.lower||(savedCfg?.lower)||1.35;
+    document.getElementById('cfgLevels').value=s.config.levels||(savedCfg?.levels)||10;
     document.getElementById('cfgStop').value=s.config.stop_loss_pct||5;
     document.getElementById('cfgTP').value=s.config.take_profit_pct||15;
     const ot=s.config.order_type||'xrp';
@@ -2012,6 +2092,7 @@ function setDirection(d){
     btn.style.background=isActive?`rgba(${d==='buy'?'0,135,90':d==='sell'?'220,38,38':'0,51,173'},.08)`:'var(--panel)';
   });
   fetch(API+'/api/bot/config',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({config:{signal_direction:d}})}).catch(()=>{});
+  localStorage.setItem('gridDirection', d);
 }
 
 function updateGridConfig(){
@@ -2030,8 +2111,11 @@ function updateGridConfig(){
   fetch(API+'/api/bot/config',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({config:cfg})})
   .then(r=>r.json())
   .then(s=>{
-    if(s.ok){showToast('✅ Config updated!','var(--green)');}
-    else{showToast('❌ Update failed','var(--red)');}
+    if(s.ok){
+      showToast('✅ Config updated!','var(--green)');
+      // Save to localStorage for persistence across app switches
+      localStorage.setItem('gridConfig', JSON.stringify(cfg));
+    } else {showToast('❌ Update failed','var(--red)');}
     fetchState();
   }).catch(e=>showToast('❌ '+e.message,'var(--red)'));
 }
@@ -2047,6 +2131,42 @@ function resetGridFields(){
   setMode('paper');
   updateActivateBtn();
   showToast('Fields cleared','var(--muted)');
+}
+
+function showBullPopup(){
+  const popup=document.getElementById('bullPopup');
+  if(!popup)return;
+  popup.style.display='block';
+  document.body.style.overflow='hidden';
+  // Populate with live data
+  const bull=lastSnap?.bull_score||0;
+  const obi_s=lastSnap?.obi_scaled||0.5;
+  const dep_s=lastSnap?.depth_scaled||0.5;
+  const spr_s=lastSnap?.spread_scaled||0.5;
+  const scoreEl=document.getElementById('bullPopupScore');
+  const labelEl=document.getElementById('bullPopupLabel');
+  if(scoreEl){
+    scoreEl.textContent=bull.toFixed(3);
+    scoreEl.style.color=bull>=0.6?'var(--green)':bull>=0.4?'var(--yellow)':'var(--red)';
+  }
+  if(labelEl)labelEl.textContent=bull>=0.6?'Strong Bullish':bull>=0.5?'Moderate Bullish':bull>=0.4?'Neutral':'Bearish';
+  // Update bars
+  const setBar=(id,val)=>{
+    const bar=document.getElementById(id+'Bar');
+    const txt=document.getElementById(id+'Val');
+    if(bar)bar.style.width=(val*100)+'%';
+    if(bar)bar.style.background=val>=0.6?'var(--green)':val>=0.4?'var(--yellow)':'var(--red)';
+    if(txt)txt.textContent=val.toFixed(3);
+    if(txt)txt.style.color=val>=0.6?'var(--green)':val>=0.4?'var(--yellow)':'var(--red)';
+  };
+  setBar('bullObi',obi_s);
+  setBar('bullDepth',dep_s);
+  setBar('bullSpread',1-spr_s);
+}
+function hideBullPopup(){
+  const popup=document.getElementById('bullPopup');
+  if(popup)popup.style.display='none';
+  document.body.style.overflow='';
 }
 
 function updateActivateBtn(){
