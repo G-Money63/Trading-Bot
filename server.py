@@ -48,7 +48,9 @@ PRODUCT_ID      = "XRP-USD"
 
 # ─── Market State ─────────────────────────────────────────────────────────────
 history         = deque(maxlen=HISTORY_MAXLEN)
-price_history   = deque(maxlen=20)  # For token momentum calculation
+price_history     = deque(maxlen=20)   # For token momentum calculation
+sentiment_history = deque(maxlen=20)   # For sentiment smoothing (5 min rolling avg)
+bid_vol_history   = deque(maxlen=20)   # For volume trend calculation
 latest_snapshot = {}
 state_lock      = threading.Lock()
 
@@ -605,32 +607,41 @@ def compute_snapshot(books):
     # ── Token-specific sentiment score (0-100) ──────────────────────────────
     # Component 1: OBI score (35%) — scaled 0-100 from -1 to +1
     obi_sentiment = round((obi + 1) / 2 * 100, 1)
-    # Component 2: Bull score (35%) — already 0-1, scale to 0-100
+
+    # Component 2: Bull score (30%) — already 0-1, scale to 0-100
     bull_sentiment = round(bull * 100, 1)
-    # Component 3: Price momentum (20%) — compare current price to rolling avg
+
+    # Component 3: Price momentum (20%) — compare current to 5min rolling avg
     price_history.append(mid)
-    if len(price_history) >= 3:
+    if len(price_history) >= 5:
         avg_price = statistics.mean(list(price_history)[:-1])
-        momentum = (mid - avg_price) / avg_price * 100  # % change
-        # Scale momentum: -2% = 0, 0% = 50, +2% = 100
+        momentum = (mid - avg_price) / avg_price * 100
+        # Scale: -2% = 0, 0% = 50, +2% = 100
         momentum_sentiment = round(max(0, min(100, (momentum + 2) / 4 * 100)), 1)
     else:
         momentum_sentiment = 50.0
-    # Component 4: OBI trend (10%) — is OBI improving or declining
-    with state_lock:
-        obi_history = [h["obi"] for h in list(history)[-10:]]
-    if len(obi_history) >= 3:
-        obi_trend = obi_history[-1] - obi_history[0]
-        obi_trend_sentiment = round(max(0, min(100, (obi_trend + 0.5) / 1.0 * 100)), 1)
+
+    # Component 4: Volume trend (15%) — current bid vol vs rolling avg
+    bid_vol_history.append(bid_vol)
+    if len(bid_vol_history) >= 5:
+        avg_bid_vol = statistics.mean(list(bid_vol_history)[:-1])
+        vol_ratio = bid_vol / avg_bid_vol if avg_bid_vol > 0 else 1.0
+        # Scale: 0.5x = 0, 1x = 50, 2x = 100
+        vol_sentiment = round(max(0, min(100, (vol_ratio - 0.5) / 1.5 * 100)), 1)
     else:
-        obi_trend_sentiment = 50.0
-    # Weighted composite
-    token_sentiment = round(
+        vol_sentiment = 50.0
+
+    # Weighted composite (raw single-snapshot score)
+    raw_sentiment = round(
         obi_sentiment * 0.35 +
-        bull_sentiment * 0.35 +
+        bull_sentiment * 0.30 +
         momentum_sentiment * 0.20 +
-        obi_trend_sentiment * 0.10, 1
+        vol_sentiment * 0.15, 1
     )
+
+    # Smooth over last 20 polls (~5 minutes) to reduce noise
+    sentiment_history.append(raw_sentiment)
+    token_sentiment = round(statistics.mean(sentiment_history), 1)
     if   token_sentiment >= 75: ts_label = "Strongly Bullish"
     elif token_sentiment >= 55: ts_label = "Bullish"
     elif token_sentiment >= 45: ts_label = "Neutral"
@@ -650,7 +661,8 @@ def compute_snapshot(books):
                 "obi": round(obi_sentiment, 1),
                 "bull": round(bull_sentiment, 1),
                 "momentum": round(momentum_sentiment, 1),
-                "obi_trend": round(obi_trend_sentiment, 1),
+                "volume": round(vol_sentiment, 1),
+                "raw": round(raw_sentiment, 1),
             },
             "mid_price":round(mid,5),"best_bid":round(best_bid,5),"best_ask":round(best_ask,5),
             "spread":round(spread,5),"spread_pct":round(sprd_pct,4),"obi":round(obi,4),
@@ -1123,7 +1135,7 @@ html.dark .demo-banner{background:var(--xrp-light);border-color:rgba(77,142,255,
           <div id="sv_obi" style="font-size:11px;font-weight:700;color:var(--muted);width:28px;text-align:right">—</div>
         </div>
         <div style="display:flex;align-items:center;gap:8px">
-          <div style="font-size:11px;color:var(--muted);width:110px;flex-shrink:0">Bull Score (35%)</div>
+          <div style="font-size:11px;color:var(--muted);width:110px;flex-shrink:0">Bull Score (30%)</div>
           <div style="flex:1;height:5px;background:var(--border);border-radius:3px;overflow:hidden"><div id="sc_bull" style="height:100%;width:50%;background:var(--xrp);border-radius:3px;transition:width .5s"></div></div>
           <div id="sv_bull" style="font-size:11px;font-weight:700;color:var(--muted);width:28px;text-align:right">—</div>
         </div>
@@ -1133,9 +1145,9 @@ html.dark .demo-banner{background:var(--xrp-light);border-color:rgba(77,142,255,
           <div id="sv_mom" style="font-size:11px;font-weight:700;color:var(--muted);width:28px;text-align:right">—</div>
         </div>
         <div style="display:flex;align-items:center;gap:8px">
-          <div style="font-size:11px;color:var(--muted);width:110px;flex-shrink:0">OBI Trend (10%)</div>
-          <div style="flex:1;height:5px;background:var(--border);border-radius:3px;overflow:hidden"><div id="sc_trend" style="height:100%;width:50%;background:var(--xrp);border-radius:3px;transition:width .5s"></div></div>
-          <div id="sv_trend" style="font-size:11px;font-weight:700;color:var(--muted);width:28px;text-align:right">—</div>
+          <div style="font-size:11px;color:var(--muted);width:110px;flex-shrink:0">Volume (15%)</div>
+          <div style="flex:1;height:5px;background:var(--border);border-radius:3px;overflow:hidden"><div id="sc_vol" style="height:100%;width:50%;background:var(--xrp);border-radius:3px;transition:width .5s"></div></div>
+          <div id="sv_vol" style="font-size:11px;font-weight:700;color:var(--muted);width:28px;text-align:right">—</div>
         </div>
       </div>
     </div>
@@ -1310,7 +1322,7 @@ html.dark .demo-banner{background:var(--xrp-light);border-color:rgba(77,142,255,
 </div>
 
 <!-- ══ VERSION BAR ══ -->
-<div class="version-bar">XRP GRID BOT · v1.6 · PAPER MODE · COINBASE ADVANCED + KRAKEN</div>
+<div class="version-bar">XRP GRID BOT · v1.7 · PAPER MODE · COINBASE ADVANCED + KRAKEN</div>
 
 <!-- ══ EXPAND MODALS ══ -->
 <!-- Price Modal -->
@@ -1622,8 +1634,8 @@ function renderMarket(d){
     // Component bars
     const sc=d.sentiment_components||{};
     const compColor=(v)=>v>=60?'#00875a':v>=45?'#eab308':'#dc2626';
-    ['obi','bull','mom','trend'].forEach((k,i)=>{
-      const key=['obi','bull','momentum','obi_trend'][i];
+    ['obi','bull','mom','vol'].forEach((k,i)=>{
+      const key=['obi','bull','momentum','volume'][i];
       const val=sc[key]||50;
       const bar=document.getElementById('sc_'+k);
       const txt=document.getElementById('sv_'+k);
