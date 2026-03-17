@@ -1310,7 +1310,7 @@ html.dark .demo-banner{background:var(--xrp-light);border-color:rgba(77,142,255,
 </div>
 
 <!-- ══ VERSION BAR ══ -->
-<div class="version-bar">XRP GRID BOT · v1.3 · PAPER MODE · COINBASE ADVANCED + KRAKEN</div>
+<div class="version-bar">XRP GRID BOT · v1.4 · PAPER MODE · COINBASE ADVANCED + KRAKEN</div>
 
 <!-- ══ EXPAND MODALS ══ -->
 <!-- Price Modal -->
@@ -2062,9 +2062,10 @@ function _doActivate(){
   .then(r=>r.json())
   .then(startRes=>{
     clearTimeout(timeout);
+    resetBtn();
     if(startRes.ok){
       showToast('✅ Bot activated!','var(--green)');
-      fetchState();
+      setTimeout(()=>fetchState(),500);
     } else {
       throw new Error('Start failed');
     }
