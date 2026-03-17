@@ -1253,12 +1253,19 @@ html.dark .demo-banner{background:var(--xrp-light);border-color:rgba(77,142,255,
       ▶ ACTIVATE BOT
     </button>
     <div id="activateSummary" style="font-size:11px;color:var(--muted);text-align:center;margin-top:8px">Fill in all fields to activate</div>
+    <button onclick="resetGridFields()" style="width:100%;margin-top:8px;padding:10px;border-radius:8px;border:1.5px solid var(--border2);background:none;color:var(--muted);font-family:var(--fh);font-size:11px;font-weight:600;cursor:pointer">🔄 RESET FIELDS</button>
 
     <!-- Bot status (shown when running) -->
-    <div id="botStatusRow" style="display:none;margin-top:12px;padding:12px;background:var(--bg);border:1px solid var(--border);border-radius:8px;text-align:center">
-      <div style="font-size:13px;font-weight:700;color:var(--green);margin-bottom:8px">● BOT ACTIVE</div>
-      <div id="botStatusDetail" style="font-size:12px;color:var(--muted)">Watching for signals...</div>
-      <button onclick="deactivateBot()" style="margin-top:10px;padding:8px 20px;border-radius:6px;border:1.5px solid var(--red);background:none;color:var(--red);font-family:var(--fh);font-size:11px;font-weight:700;cursor:pointer">⏹ STOP BOT</button>
+    <div id="botStatusRow" style="display:none;margin-top:12px">
+      <div style="padding:14px;background:rgba(0,135,90,.08);border:2px solid var(--green);border-radius:10px;text-align:center">
+        <div style="display:flex;align-items:center;justify-content:center;gap:8px;margin-bottom:6px">
+          <span style="width:10px;height:10px;border-radius:50%;background:var(--green);display:inline-block;animation:pulse 1.5s infinite"></span>
+          <span style="font-size:15px;font-weight:800;color:var(--green);font-family:var(--fh)">BOT ACTIVE</span>
+        </div>
+        <div id="botStatusDetail" style="font-size:12px;color:var(--muted);margin-bottom:10px">Watching for signals...</div>
+        <div style="font-size:11px;color:var(--muted);margin-bottom:12px">Signals will appear on the SIGNALS tab</div>
+        <button onclick="deactivateBot()" style="width:100%;padding:12px;border-radius:8px;border:2px solid var(--red);background:rgba(220,38,38,.08);color:var(--red);font-family:var(--fh);font-size:12px;font-weight:700;cursor:pointer">⏹ STOP BOT</button>
+      </div>
     </div>
   </div>
 
@@ -1303,7 +1310,7 @@ html.dark .demo-banner{background:var(--xrp-light);border-color:rgba(77,142,255,
 </div>
 
 <!-- ══ VERSION BAR ══ -->
-<div class="version-bar">XRP GRID BOT · v1.2 · PAPER MODE · COINBASE ADVANCED + KRAKEN</div>
+<div class="version-bar">XRP GRID BOT · v1.3 · PAPER MODE · COINBASE ADVANCED + KRAKEN</div>
 
 <!-- ══ EXPAND MODALS ══ -->
 <!-- Price Modal -->
@@ -1920,8 +1927,12 @@ function renderBotStatus(s){
   const btn=document.getElementById('activateBtn');
   const summaryEl=document.getElementById('activateSummary');
   if(row)row.style.display=s.running?'block':'none';
-  if(btn)btn.style.display=s.running?'none':'block';
-  if(summaryEl&&s.running)summaryEl.style.display='none';
+  if(btn){
+    btn.style.display=s.running?'none':'block';
+    btn.disabled=false;
+    btn.style.opacity='1';
+  }
+  if(summaryEl)summaryEl.style.display=s.running?'none':'block';
   const detail=document.getElementById('botStatusDetail');
   if(detail&&s.config)detail.textContent=`${s.config.levels} levels · $${s.config.lower}–$${s.config.upper} · ${(s.mode||'paper').toUpperCase()} mode`;
   const cb=document.getElementById('cbStat');
@@ -1957,6 +1968,19 @@ function setMode(m){
 }
 
 let currentMode='paper';
+
+function resetGridFields(){
+  document.getElementById('cfgLower').value='';
+  document.getElementById('cfgUpper').value='';
+  document.getElementById('cfgLevels').value='';
+  document.getElementById('cfgAmount').value='';
+  document.getElementById('cfgStop').value='';
+  document.getElementById('cfgTP').value='';
+  currentMode='paper';
+  setMode('paper');
+  updateActivateBtn();
+  showToast('Fields cleared','var(--muted)');
+}
 
 function updateActivateBtn(){
   const lower=parseFloat(document.getElementById('cfgLower')?.value||0);
