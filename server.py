@@ -949,6 +949,7 @@ html.dark .gauge-track{background:linear-gradient(90deg,rgba(255,68,102,.2),var(
 .inp-group{display:flex;flex-direction:column;gap:4px}
 .inp-label{font-family:var(--fh);font-size:11px;letter-spacing:1px;color:var(--muted);text-transform:uppercase;font-weight:700}
 .inp{background:var(--bg);border:1.5px solid var(--border);border-radius:var(--radius-sm);color:var(--text);font-family:var(--fm);font-size:16px;font-weight:500;padding:9px 12px;width:100%;outline:none}
+.inp::placeholder{color:var(--muted);font-weight:400;opacity:.6}
 .inp:focus{border-color:var(--xrp)}
 .btn-row{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
 .btn{font-family:var(--fh);font-size:11px;font-weight:700;letter-spacing:1px;padding:10px 18px;border-radius:var(--radius-sm);border:none;cursor:pointer;text-transform:uppercase}
@@ -2017,28 +2018,34 @@ function _doActivate(){
     if(btn){btn.textContent=`▶ ACTIVATE BOT · ${currentMode==='live'?'🔴 LIVE MODE':'📝 PAPER MODE'}`;btn.style.opacity='1';btn.disabled=false;}
   };
   const timeout=setTimeout(()=>{resetBtn();showToast('⚠️ Activation timed out','var(--yellow)');},8000);
-  Promise.all([
-    fetch(API+'/api/bot/config',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({mode:currentMode,config:{
-      upper:+document.getElementById('cfgUpper').value,
-      lower:+document.getElementById('cfgLower').value,
-      levels:+document.getElementById('cfgLevels').value,
-      amount_usd:currentOrderType==='usd'?+amount:+amount*1.5,
-      amount_xrp:currentOrderType==='xrp'?+amount:Math.round(+amount/1.5*10)/10,
-      order_type:currentOrderType,
-      stop_loss_pct:+document.getElementById('cfgStop').value||5,
-      take_profit_pct:+document.getElementById('cfgTP').value||15
-    }})}).then(r=>r.json()),
-    fetch(API+'/api/bot/start',{method:'POST'}).then(r=>r.json())
-  ]).then(([cfg,start])=>{
+  const price=lastSnap?.mid_price||1.50;
+  const cfg={
+    upper:+document.getElementById('cfgUpper').value||1.55,
+    lower:+document.getElementById('cfgLower').value||1.45,
+    levels:+document.getElementById('cfgLevels').value||10,
+    amount_usd:currentOrderType==='usd'?+amount:(+amount*price),
+    amount_xrp:currentOrderType==='xrp'?+amount:Math.round(+amount/price*10)/10,
+    order_type:currentOrderType,
+    stop_loss_pct:+document.getElementById('cfgStop').value||5,
+    take_profit_pct:+document.getElementById('cfgTP').value||15
+  };
+  fetch(API+'/api/bot/config',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({mode:currentMode,config:cfg})})
+  .then(r=>r.json())
+  .then(cfgRes=>{
+    if(!cfgRes.ok)throw new Error('Config failed');
+    return fetch(API+'/api/bot/start',{method:'POST'});
+  })
+  .then(r=>r.json())
+  .then(startRes=>{
     clearTimeout(timeout);
-    if(cfg.ok&&start.ok){
+    if(startRes.ok){
       showToast('✅ Bot activated!','var(--green)');
       fetchState();
     } else {
-      showToast('❌ Activation failed','var(--red)');
-      resetBtn();
+      throw new Error('Start failed');
     }
-  }).catch(e=>{
+  })
+  .catch(e=>{
     clearTimeout(timeout);
     showToast('❌ '+e.message,'var(--red)');
     resetBtn();
