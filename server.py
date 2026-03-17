@@ -1310,7 +1310,7 @@ html.dark .demo-banner{background:var(--xrp-light);border-color:rgba(77,142,255,
 </div>
 
 <!-- ══ VERSION BAR ══ -->
-<div class="version-bar">XRP GRID BOT · v1.5 · PAPER MODE · COINBASE ADVANCED + KRAKEN</div>
+<div class="version-bar">XRP GRID BOT · v1.6 · PAPER MODE · COINBASE ADVANCED + KRAKEN</div>
 
 <!-- ══ EXPAND MODALS ══ -->
 <!-- Price Modal -->
@@ -2061,7 +2061,16 @@ function _doActivate(){
     resetBtn();
     if(startRes.ok){
       showToast('✅ Bot activated!','var(--green)');
-      setTimeout(()=>fetchState(),500);
+      // Force UI to show BOT ACTIVE immediately without waiting for fetchState
+      const row=document.getElementById('botStatusRow');
+      const btn=document.getElementById('activateBtn');
+      const summaryEl=document.getElementById('activateSummary');
+      if(row)row.style.display='block';
+      if(btn)btn.style.display='none';
+      if(summaryEl)summaryEl.style.display='none';
+      const detail=document.getElementById('botStatusDetail');
+      if(detail)detail.textContent=`${document.getElementById('cfgLevels').value} levels · $${document.getElementById('cfgLower').value}–$${document.getElementById('cfgUpper').value} · ${currentMode.toUpperCase()} mode`;
+      setTimeout(()=>fetchState(),1000);
     } else {
       throw new Error('Start failed');
     }
