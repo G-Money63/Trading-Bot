@@ -1325,7 +1325,7 @@ html.dark .demo-banner{background:var(--xrp-light);border-color:rgba(77,142,255,
 </div>
 
 <!-- ══ VERSION BAR ══ -->
-<div class="version-bar">XRP GRID BOT · v2.2 · PAPER MODE · COINBASE ADVANCED + KRAKEN</div>
+<div class="version-bar">XRP GRID BOT · v2.3 · PAPER MODE · COINBASE ADVANCED + KRAKEN</div>
 
 <!-- ══ EXPAND MODALS ══ -->
 <!-- Price Modal -->
@@ -1869,7 +1869,8 @@ function renderGridViz(state){
   const prices=lines.map(l=>l.price);
   const minP=Math.min(...prices),maxP=Math.max(...prices),rangeP=maxP-minP||1;
   const curP=state.market?.mid_price||0;
-  document.getElementById('gridPriceRange').textContent='$'+fmt(minP,4)+' — $'+fmt(maxP,4);
+  const gridRange=document.getElementById('gridPriceRange');
+  if(gridRange)gridRange.textContent='$'+fmt(minP,4)+' — $'+fmt(maxP,4);
   let html='';
   lines.forEach(l=>{
     const topPct=100-((l.price-minP)/rangeP*100);
@@ -1884,7 +1885,8 @@ function renderGridViz(state){
 }
 
 function renderPortfolio(pf){
-  if(!pf)return;
+  console.log('renderPortfolio called with:', JSON.stringify(pf));
+  if(!pf){console.log('pf is null/undefined');return;}
   const pfCash=document.getElementById('pfCash');
   if(pfCash)pfCash.textContent=fmtU(pf.cash_usd);
   const pfXrp=document.getElementById('pfXrp');
