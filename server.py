@@ -1325,7 +1325,7 @@ html.dark .demo-banner{background:var(--xrp-light);border-color:rgba(77,142,255,
 </div>
 
 <!-- ══ VERSION BAR ══ -->
-<div class="version-bar">XRP GRID BOT · v1.9 · PAPER MODE · COINBASE ADVANCED + KRAKEN</div>
+<div class="version-bar">XRP GRID BOT · v2.0 · PAPER MODE · COINBASE ADVANCED + KRAKEN</div>
 
 <!-- ══ EXPAND MODALS ══ -->
 <!-- Price Modal -->
@@ -2249,7 +2249,7 @@ async function fetchMarket(){
     }
   }catch(e){setStatus(false,demoMode?'DEMO MODE':'CONNECTING…');}
 }
-async function fetchState(){
+async async function fetchState(){
   try{
     const s=await fetch('/api/bot/state',{cache:'no-store'}).then(r=>r.json());
     if(s&&s.portfolio){
