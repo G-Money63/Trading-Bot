@@ -1381,7 +1381,7 @@ html.dark .demo-banner{background:var(--xrp-light);border-color:rgba(77,142,255,
 </div>
 
 <!-- ══ VERSION BAR ══ -->
-<div class="version-bar">XRP GRID BOT · v3.4 · PAPER MODE · COINBASE ADVANCED + KRAKEN</div>
+<div class="version-bar">XRP GRID BOT · v3.5 · PAPER MODE · COINBASE ADVANCED + KRAKEN</div>
 
 <!-- ══ BULL SCORE POPUP ══ -->
 <div id="bullPopup" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.6);z-index:1000;padding:20px;overflow-y:auto" onclick="hideBullPopup()">
@@ -2528,19 +2528,39 @@ async function enableNotifications(){
   const btn=document.getElementById('notifBtn');
   if(btn){btn.textContent='⏳ Enabling...';btn.disabled=true;}
   try {
-    await initPushNotifications(true);
+    if(!('serviceWorker' in navigator)||!('PushManager' in window)){
+      showToast('❌ Push not supported on this browser','var(--red)');
+      if(btn){btn.textContent='🔔 ALERTS';btn.disabled=false;}
+      return;
+    }
+    const reg = await navigator.serviceWorker.register('/sw.js');
+    await navigator.serviceWorker.ready;
+    const existing = await reg.pushManager.getSubscription();
+    if(existing){
+      // Already subscribed - just re-send to server
+      await fetch('/api/bot/subscribe',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({subscription:existing.toJSON()})});
+      if(btn){btn.textContent='🔔 ALERTS ON';btn.style.color='var(--green)';btn.style.borderColor='var(--green)';btn.disabled=false;}
+      showToast('🔔 Alerts already active!','var(--green)');
+      return;
+    }
+    const permission = await Notification.requestPermission();
+    if(permission !== 'granted'){
+      showToast('❌ Notification permission denied','var(--red)');
+      if(btn){btn.textContent='🔔 ALERTS';btn.disabled=false;}
+      return;
+    }
+    const sub = await reg.pushManager.subscribe({
+      userVisibleOnly: true,
+      applicationServerKey: VAPID_PUBLIC
+    });
+    await fetch('/api/bot/subscribe',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({subscription:sub.toJSON()})});
+    if(btn){btn.textContent='🔔 ALERTS ON';btn.style.color='var(--green)';btn.style.borderColor='var(--green)';btn.disabled=false;}
+    showToast('🔔 Signal notifications enabled!','var(--green)');
   } catch(e) {
     console.error('Enable notifications error:', e);
     if(btn){btn.textContent='🔔 ALERTS';btn.disabled=false;}
     showToast('❌ '+e.message,'var(--red)');
   }
-  // Always reset button after 5 seconds as safety net
-  setTimeout(()=>{
-    const b=document.getElementById('notifBtn');
-    if(b&&b.textContent.includes('Enabling')){
-      b.textContent='🔔 ALERTS';b.disabled=false;
-    }
-  }, 5000);
 }
 
 async function initPushNotifications(manual=false){
@@ -2574,8 +2594,20 @@ async function initPushNotifications(manual=false){
     if(manual)showToast('❌ Notifications failed: '+e.message,'var(--red)');
   }
 }
-// Initialize push after page loads
-setTimeout(initPushNotifications, 2000);
+// Check push status on load
+setTimeout(async()=>{
+  if(!('serviceWorker' in navigator)||!('PushManager' in window))return;
+  try{
+    const reg = await navigator.serviceWorker.register('/sw.js');
+    await navigator.serviceWorker.ready;
+    const existing = await reg.pushManager.getSubscription();
+    if(existing){
+      await fetch('/api/bot/subscribe',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({subscription:existing.toJSON()})});
+      const btn=document.getElementById('notifBtn');
+      if(btn){btn.textContent='🔔 ALERTS ON';btn.style.color='var(--green)';btn.style.borderColor='var(--green)';}
+    }
+  }catch(e){console.log('SW check:',e);}
+}, 2000);
 
 // Background fetch + polling
 fetchMarket();fetchState();
