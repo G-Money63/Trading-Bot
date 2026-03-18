@@ -1766,8 +1766,8 @@ function renderMarket(d){
   const el=document.getElementById('tilePriceSub');
   if(d.change_24h!=null){
     const pct=d.change_24h;
-    const absChange=Math.abs(d.mid_price*(pct/100)).toFixed(4);
-    el.textContent=(pct>=0?'▲ +':'▼ ')+Math.abs(pct).toFixed(2)+'% ($'+(pct>=0?'+':'')+d.mid_price*(pct/100)).toFixed(4)+')';
+    const chg=(d.mid_price*(pct/100));
+    el.textContent=(pct>=0?'▲ +':'▼ ')+Math.abs(pct).toFixed(2)+'% ('+(chg>=0?'+':'')+chg.toFixed(4)+')';
     el.style.color=mp.style.color=pct>=0?'var(--green)':'var(--red)';
   } else if(prevPrice!=null){
     const df=d.mid_price-prevPrice;
