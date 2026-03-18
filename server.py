@@ -698,8 +698,10 @@ def compute_snapshot(books):
     # ── BTC Fear & Greed (reference only) ──────────────────────────────────
     fng_val = fng_cache.get("value")
     fng_cls = fng_cache.get("classification", "—")
+    change_24h = price_24h_cache.get("open_24h")
     return {"ts":datetime.now(timezone.utc).isoformat(),"unix":time.time(),"sources":sources,
             "fear_greed_value": fng_val, "fear_greed_classification": fng_cls,
+            "change_24h": change_24h,
             "token_sentiment": token_sentiment, "token_sentiment_label": ts_label,
             "token_sentiment_color": ts_color,
             "sentiment_components": {
@@ -719,6 +721,29 @@ def compute_snapshot(books):
 
 FNG_URL = "https://api.alternative.me/fng/?limit=1"
 fng_cache = {"value": None, "classification": None, "ts": 0}
+
+# 24h price change cache
+price_24h_cache = {"open_24h": None, "ts": 0}
+
+def fetch_24h_stats():
+    """Fetch 24h stats from Coinbase — updates every 5 minutes."""
+    import time as _t
+    now = _t.time()
+    if price_24h_cache["open_24h"] is not None and (now - price_24h_cache["ts"]) < 300:
+        return price_24h_cache
+    try:
+        url = "https://api.coinbase.com/api/v3/brokerage/market/products/XRP-USD"
+        req = urllib.request.Request(url, headers={"User-Agent": "XRP-Bot/1.0", "Accept": "application/json"})
+        with urllib.request.urlopen(req, timeout=8) as r:
+            d = json.loads(r.read())
+        open_24h = float(d.get("price_percentage_change_24h", 0))
+        price_24h_cache["open_24h"] = open_24h
+        price_24h_cache["ts"] = now
+        log.info(f"24h change: {open_24h:.2f}%")
+        return price_24h_cache
+    except Exception as e:
+        log.warning(f"24h stats fetch failed: {e}")
+        return price_24h_cache
 
 def fetch_fear_greed():
     """Fetch Fear & Greed Index — updates daily, cache for 1 hour."""
@@ -760,6 +785,8 @@ async def poll_loop():
             log.info(f"Poll #{poll_count} Kraken: {'OK' if krk else 'FAILED'}")
             # Fetch Fear & Greed (cached hourly, non-blocking)
             await asyncio.get_event_loop().run_in_executor(None, fetch_fear_greed)
+            # Fetch 24h stats (cached 5 min)
+            await asyncio.get_event_loop().run_in_executor(None, fetch_24h_stats)
             snap = compute_snapshot([b for b in [cb, krk] if b])
             if snap:
                 with state_lock:
@@ -1381,7 +1408,7 @@ html.dark .demo-banner{background:var(--xrp-light);border-color:rgba(77,142,255,
 </div>
 
 <!-- ══ VERSION BAR ══ -->
-<div class="version-bar">XRP GRID BOT · v3.5 · PAPER MODE · COINBASE ADVANCED + KRAKEN</div>
+<div class="version-bar">XRP GRID BOT · v3.7 · PAPER MODE · COINBASE ADVANCED + KRAKEN</div>
 
 <!-- ══ BULL SCORE POPUP ══ -->
 <div id="bullPopup" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.6);z-index:1000;padding:20px;overflow-y:auto" onclick="hideBullPopup()">
@@ -1735,9 +1762,15 @@ function renderMarket(d){
   document.getElementById('tileSignalSub').textContent='OBI: '+(d.obi>=0?'+':'')+fmt(d.obi,4);
   // Conviction shown in gauge label
   const mp=document.getElementById('tilePrice');mp.textContent='$'+fmt(d.mid_price,4);
-  if(prevPrice!=null){
+  // Show 24h change if available, otherwise show tick change
+  const el=document.getElementById('tilePriceSub');
+  if(d.change_24h!=null){
+    const pct=d.change_24h;
+    const absChange=Math.abs(d.mid_price*(pct/100)).toFixed(4);
+    el.textContent=(pct>=0?'▲ +':'▼ ')+Math.abs(pct).toFixed(2)+'% ($'+(pct>=0?'+':'')+d.mid_price*(pct/100)).toFixed(4)+')';
+    el.style.color=mp.style.color=pct>=0?'var(--green)':'var(--red)';
+  } else if(prevPrice!=null){
     const df=d.mid_price-prevPrice;
-    const el=document.getElementById('tilePriceSub');
     el.textContent=(df>=0?'▲ +':'▼ ')+fmt(df,5);
     el.style.color=mp.style.color=df>=0?'var(--green)':'var(--red)';
   }
@@ -2096,13 +2129,17 @@ function renderBotStatus(s){
     cb.style.fontWeight='700';
   }
   if(s.config){
-    // Load from server first, fallback to localStorage
-    const savedCfg=JSON.parse(localStorage.getItem('gridConfig')||'null');
-    document.getElementById('cfgUpper').value=s.config.upper||(savedCfg?.upper)||1.50;
-    document.getElementById('cfgLower').value=s.config.lower||(savedCfg?.lower)||1.35;
-    document.getElementById('cfgLevels').value=s.config.levels||(savedCfg?.levels)||10;
-    document.getElementById('cfgStop').value=s.config.stop_loss_pct||5;
-    document.getElementById('cfgTP').value=s.config.take_profit_pct||15;
+    // Only update fields if user is NOT currently editing them
+    const activeEl = document.activeElement;
+    const editingGrid = activeEl && ['cfgUpper','cfgLower','cfgLevels','cfgStop','cfgTP','cfgAmount'].includes(activeEl.id);
+    if(!editingGrid){
+      const savedCfg=JSON.parse(localStorage.getItem('gridConfig')||'null');
+      document.getElementById('cfgUpper').value=s.config.upper||(savedCfg?.upper)||1.50;
+      document.getElementById('cfgLower').value=s.config.lower||(savedCfg?.lower)||1.35;
+      document.getElementById('cfgLevels').value=s.config.levels||(savedCfg?.levels)||10;
+      document.getElementById('cfgStop').value=s.config.stop_loss_pct||5;
+      document.getElementById('cfgTP').value=s.config.take_profit_pct||15;
+    }
     const ot=s.config.order_type||'xrp';
     currentOrderType=ot;setOrderType(ot);
     document.getElementById('cfgAmount').value=ot==='xrp'?(s.config.amount_xrp||10):(s.config.amount_usd||50);
@@ -2161,6 +2198,7 @@ function updateGridConfig(){
       showToast('✅ Config updated!','var(--green)');
       // Save to localStorage for persistence across app switches
       localStorage.setItem('gridConfig', JSON.stringify(cfg));
+      localStorage.setItem('gridConfigTs', Date.now());
     } else {showToast('❌ Update failed','var(--red)');}
     fetchState();
   }).catch(e=>showToast('❌ '+e.message,'var(--red)'));
