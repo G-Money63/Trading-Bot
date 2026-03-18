@@ -1090,6 +1090,11 @@ html.dark .demo-banner{background:var(--xrp-light);border-color:rgba(77,142,255,
 <div id="pane-signals" class="pane active">
   <div class="demo-banner" id="demoBanner">✦ DEMO MODE — Connecting to live data...</div>
 
+  <!-- Notification button -->
+  <div style="display:flex;justify-content:flex-end;padding:0 0 6px">
+    <button id="notifBtn" onclick="enableNotifications()" style="font-family:var(--fh);font-size:10px;font-weight:700;padding:6px 14px;border-radius:20px;border:1.5px solid var(--border2);background:var(--panel);color:var(--muted);cursor:pointer;letter-spacing:.5px">🔔 ENABLE ALERTS</button>
+  </div>
+
   <!-- Time strip -->
   <div class="time-strip">
     <div><div class="time-label">LOCAL TIME</div><div class="time-val" id="clock">--:--:--</div></div>
@@ -1378,7 +1383,7 @@ html.dark .demo-banner{background:var(--xrp-light);border-color:rgba(77,142,255,
 </div>
 
 <!-- ══ VERSION BAR ══ -->
-<div class="version-bar">XRP GRID BOT · v3.0 · PAPER MODE · COINBASE ADVANCED + KRAKEN</div>
+<div class="version-bar">XRP GRID BOT · v3.1 · PAPER MODE · COINBASE ADVANCED + KRAKEN</div>
 
 <!-- ══ BULL SCORE POPUP ══ -->
 <div id="bullPopup" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.6);z-index:1000;padding:20px;overflow-y:auto" onclick="hideBullPopup()">
@@ -2521,7 +2526,13 @@ initCharts();
 })();
 // ── Push Notifications ──
 const VAPID_PUBLIC = '__VAPID_PUBLIC__';
-async function initPushNotifications(){
+async function enableNotifications(){
+  const btn=document.getElementById('notifBtn');
+  if(btn){btn.textContent='⏳ Enabling...';btn.disabled=true;}
+  await initPushNotifications(true);
+}
+
+async function initPushNotifications(manual=false){
   if(!('serviceWorker' in navigator)||!('PushManager' in window)){
     console.log('Push not supported');return;
   }
@@ -2543,7 +2554,14 @@ async function initPushNotifications(){
     await fetch('/api/bot/subscribe',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({subscription:sub.toJSON()})});
     console.log('Push subscribed!');
     showToast('🔔 Signal notifications enabled!','var(--green)');
-  } catch(e){console.error('Push init error:',e);}
+    const btn=document.getElementById('notifBtn');
+    if(btn){btn.textContent='🔔 ALERTS ON';btn.style.color='var(--green)';btn.style.borderColor='var(--green)';}
+  } catch(e){
+    console.error('Push init error:',e);
+    const btn=document.getElementById('notifBtn');
+    if(btn){btn.textContent='🔔 ENABLE ALERTS';btn.disabled=false;}
+    if(manual)showToast('❌ Notifications failed: '+e.message,'var(--red)');
+  }
 }
 // Initialize push after page loads
 setTimeout(initPushNotifications, 2000);
