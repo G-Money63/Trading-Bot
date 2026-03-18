@@ -1090,11 +1090,6 @@ html.dark .demo-banner{background:var(--xrp-light);border-color:rgba(77,142,255,
 <div id="pane-signals" class="pane active">
   <div class="demo-banner" id="demoBanner">✦ DEMO MODE — Connecting to live data...</div>
 
-  <!-- Notification button -->
-  <div style="display:flex;justify-content:flex-end;padding:0 0 6px">
-    <button id="notifBtn" onclick="enableNotifications()" style="font-family:var(--fh);font-size:10px;font-weight:700;padding:6px 14px;border-radius:20px;border:1.5px solid var(--border2);background:var(--panel);color:var(--muted);cursor:pointer;letter-spacing:.5px">🔔 ENABLE ALERTS</button>
-  </div>
-
   <!-- Time strip -->
   <div class="time-strip">
     <div><div class="time-label">LOCAL TIME</div><div class="time-val" id="clock">--:--:--</div></div>
@@ -1262,12 +1257,15 @@ html.dark .demo-banner{background:var(--xrp-light);border-color:rgba(77,142,255,
 <div id="pane-grid" class="pane">
   <div class="panel">
 
-    <!-- Progress bar -->
-    <div style="display:flex;gap:5px;margin-bottom:16px" id="gridProgress">
+    <!-- Progress bar + Notifications button -->
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:16px">
+      <div style="display:flex;gap:5px;flex:1" id="gridProgress">
       <div style="flex:1;height:4px;border-radius:2px;background:var(--border2)" id="prog1"></div>
       <div style="flex:1;height:4px;border-radius:2px;background:var(--border2)" id="prog2"></div>
       <div style="flex:1;height:4px;border-radius:2px;background:var(--border2)" id="prog3"></div>
       <div style="flex:1;height:4px;border-radius:2px;background:var(--border2)" id="prog4"></div>
+      </div>
+      <button id="notifBtn" onclick="enableNotifications()" style="font-family:var(--fh);font-size:10px;font-weight:700;padding:6px 12px;border-radius:20px;border:1.5px solid var(--border2);background:var(--panel);color:var(--muted);cursor:pointer;white-space:nowrap;flex-shrink:0">🔔 ALERTS</button>
     </div>
 
     <!-- Section 1: Price Range -->
@@ -1383,7 +1381,7 @@ html.dark .demo-banner{background:var(--xrp-light);border-color:rgba(77,142,255,
 </div>
 
 <!-- ══ VERSION BAR ══ -->
-<div class="version-bar">XRP GRID BOT · v3.1 · PAPER MODE · COINBASE ADVANCED + KRAKEN</div>
+<div class="version-bar">XRP GRID BOT · v3.3 · PAPER MODE · COINBASE ADVANCED + KRAKEN</div>
 
 <!-- ══ BULL SCORE POPUP ══ -->
 <div id="bullPopup" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.6);z-index:1000;padding:20px;overflow-y:auto" onclick="hideBullPopup()">
