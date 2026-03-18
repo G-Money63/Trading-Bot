@@ -29,7 +29,8 @@ log = logging.getLogger(__name__)
 
 # ─── Config ───────────────────────────────────────────────────────────────────
 PORT            = int(os.environ.get("PORT", 8080))
-BUILD_ID        = os.environ.get("BUILD_ID", str(int(time.time())))  # unique per deploy
+BUILD_ID        = os.environ.get("BUILD_ID", str(int(time.time())))
+VAPID_PUBLIC_KEY = os.environ.get("VAPID_PUBLIC", "")  # unique per deploy
 POLL_INTERVAL   = 15
 HISTORY_MAXLEN  = 200
 OBI_THRESHOLD   = 0.15
@@ -45,6 +46,10 @@ _raw_secret     = os.environ.get("CB_API_SECRET", "")
 CB_API_SECRET   = _raw_secret.replace("\\n", "\n") if "\\n" in _raw_secret else _raw_secret
 CB_BASE_URL     = "https://api.coinbase.com"
 PRODUCT_ID      = "XRP-USD"
+VAPID_PRIVATE   = os.environ.get("VAPID_PRIVATE", "")
+VAPID_PUBLIC    = os.environ.get("VAPID_PUBLIC", "")
+VAPID_EMAIL     = os.environ.get("VAPID_EMAIL", "mailto:admin@example.com")
+push_subscriptions = []  # Store push subscriptions in memory
 
 # ─── Market State ─────────────────────────────────────────────────────────────
 history         = deque(maxlen=HISTORY_MAXLEN)
@@ -282,6 +287,13 @@ def run_grid_tick(snap):
             buy_price = lines[band]         # bottom of this band
             sig = make_signal("BUY", buy_price, band, lines[band], lines[band+1], snap)
             grid["pending"].append(sig)
+            try:
+                send_push_notification(
+                    f"🟢 BUY Signal @ ${sig['price']:.4f}",
+                    f"{sig.get('level_label','Grid')} · {sig.get('conviction','—')} conviction · {grid['mode'].upper()} MODE",
+                    {"signal_id": sig["id"], "side": sig["side"]}
+                )
+            except: pass
             log.info(f"BUY signal queued: level {band+1}  @${buy_price:.5f}  conf={sig['confidence']}")
 
         # Price rose into this band → SELL opportunity at the upper line
@@ -289,6 +301,13 @@ def run_grid_tick(snap):
             sell_price = lines[band + 1]    # top of this band
             sig = make_signal("SELL", sell_price, band, lines[band], lines[band+1], snap)
             grid["pending"].append(sig)
+            try:
+                send_push_notification(
+                    f"🔴 SELL Signal @ ${sig['price']:.4f}",
+                    f"{sig.get('level_label','Grid')} · {sig.get('conviction','—')} conviction · {grid['mode'].upper()} MODE",
+                    {"signal_id": sig["id"], "side": sig["side"]}
+                )
+            except: pass
             log.info(f"SELL signal queued: level {band+1}  @${sell_price:.5f}  conf={sig['confidence']}")
 
 # ─── Trade Execution ──────────────────────────────────────────────────────────
@@ -358,6 +377,30 @@ def execute_paper(sig):
         grid["trade_log"].appendleft(dict(sig))
         log.info(f"[PAPER {side}] ${price:.5f} × {sig['xrp_qty']:.4f} XRP  [{sig['level_label']}]")
         return True, "ok"
+
+def send_push_notification(title, body_text, data=None):
+    """Send Web Push notification to all subscribers."""
+    if not push_subscriptions or not VAPID_PRIVATE:
+        return
+    try:
+        from pywebpush import webpush, WebPushException
+        for sub in push_subscriptions[:]:
+            try:
+                webpush(
+                    subscription_info=sub,
+                    data=json.dumps({"title": title, "body": body_text, "data": data or {}}),
+                    vapid_private_key=VAPID_PRIVATE,
+                    vapid_claims={"sub": VAPID_EMAIL}
+                )
+                log.info(f"Push sent: {title}")
+            except WebPushException as e:
+                if "410" in str(e) or "404" in str(e):
+                    push_subscriptions.remove(sub)  # Remove expired subscription
+                log.warning(f"Push failed: {e}")
+    except ImportError:
+        log.warning("pywebpush not installed - push notifications disabled")
+    except Exception as e:
+        log.error(f"Push error: {e}")
 
 def _clean_pem(secret):
     """Fix PEM key stored with literal \n instead of real newlines."""
@@ -1335,7 +1378,7 @@ html.dark .demo-banner{background:var(--xrp-light);border-color:rgba(77,142,255,
 </div>
 
 <!-- ══ VERSION BAR ══ -->
-<div class="version-bar">XRP GRID BOT · v2.9 · PAPER MODE · COINBASE ADVANCED + KRAKEN</div>
+<div class="version-bar">XRP GRID BOT · v3.0 · PAPER MODE · COINBASE ADVANCED + KRAKEN</div>
 
 <!-- ══ BULL SCORE POPUP ══ -->
 <div id="bullPopup" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.6);z-index:1000;padding:20px;overflow-y:auto" onclick="hideBullPopup()">
@@ -2476,6 +2519,35 @@ initCharts();
     renderPortfolio({cash_usd:1000,xrp_held:0,avg_entry:0,realized_pnl:0,xrp_value_usd:0,total_value:1000,unrealized_pnl:0,current_price:0});
   }
 })();
+// ── Push Notifications ──
+const VAPID_PUBLIC = '__VAPID_PUBLIC__';
+async function initPushNotifications(){
+  if(!('serviceWorker' in navigator)||!('PushManager' in window)){
+    console.log('Push not supported');return;
+  }
+  try {
+    const reg = await navigator.serviceWorker.register('/sw.js');
+    console.log('SW registered');
+    const permission = await Notification.requestPermission();
+    if(permission !== 'granted'){console.log('Push permission denied');return;}
+    const existing = await reg.pushManager.getSubscription();
+    if(existing){
+      await fetch('/api/bot/subscribe',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({subscription:existing.toJSON()})});
+      console.log('Push re-subscribed');
+      return;
+    }
+    const sub = await reg.pushManager.subscribe({
+      userVisibleOnly: true,
+      applicationServerKey: VAPID_PUBLIC
+    });
+    await fetch('/api/bot/subscribe',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({subscription:sub.toJSON()})});
+    console.log('Push subscribed!');
+    showToast('🔔 Signal notifications enabled!','var(--green)');
+  } catch(e){console.error('Push init error:',e);}
+}
+// Initialize push after page loads
+setTimeout(initPushNotifications, 2000);
+
 // Background fetch + polling
 fetchMarket();fetchState();
 setInterval(async function(){
@@ -2497,6 +2569,7 @@ class Handler(BaseHTTPRequestHandler):
                 '<meta charset="UTF-8"/>',
                 f'<meta charset="UTF-8"/><meta name="build-id" content="{BUILD_ID}"/>'
             )
+            html = html.replace("'__VAPID_PUBLIC__'", f"'{VAPID_PUBLIC_KEY}'" if VAPID_PUBLIC_KEY else "''")
             # Inject live snapshot as global JS var so page renders live immediately
             with state_lock:
                 snap = latest_snapshot
@@ -2517,6 +2590,14 @@ window.__HIST__ = {json.dumps(hist)};
             with state_lock: self._json(list(history))
         elif path=="/api/bot/state":
             self._json(full_state())
+        elif path=="/sw.js":
+            sw_code = """self.addEventListener('push',function(e){const d=e.data?e.data.json():{};e.waitUntil(self.registration.showNotification(d.title||'XRP Grid Bot',{body:d.body||'New signal',icon:'/favicon.ico',tag:'signal',renotify:true,data:d.data||{}}));});self.addEventListener('notificationclick',function(e){e.notification.close();e.waitUntil(clients.openWindow('/'));});"""
+            self.send_response(200)
+            self.send_header('Content-Type','application/javascript')
+            self.send_header('Service-Worker-Allowed','/')
+            self.send_header('Cache-Control','no-cache')
+            self.end_headers()
+            self.wfile.write(sw_code.encode())
         elif path=="/health":
             self._json({"ok":True,"running":grid["running"],"mode":grid["mode"]})
         else:
@@ -2537,6 +2618,17 @@ window.__HIST__ = {json.dumps(hist)};
                 if "last_sell_price" in body: pf["last_sell_price"] = float(body["last_sell_price"])
                 log.info(f"Portfolio manually synced: cash=${pf['cash_usd']} xrp={pf['xrp_held']} avg=${pf['avg_entry']}")
             self._json({"ok":True,"portfolio":grid["portfolio"]})
+        elif path=="/api/bot/subscribe":
+            sub = body.get("subscription")
+            if sub and sub not in push_subscriptions:
+                push_subscriptions.append(sub)
+                log.info(f"Push subscription added. Total: {len(push_subscriptions)}")
+            self._json({"ok": True, "count": len(push_subscriptions)})
+        elif path=="/api/bot/unsubscribe":
+            sub = body.get("subscription")
+            if sub in push_subscriptions:
+                push_subscriptions.remove(sub)
+            self._json({"ok": True})
         elif path=="/api/bot/test_signal":
             side = body.get("side","BUY").upper()
             with grid_lock:
@@ -2550,6 +2642,11 @@ window.__HIST__ = {json.dumps(hist)};
                 sig["label"] = "TEST SIGNAL"
                 grid["pending"].append(sig)
                 log.info(f"[TEST] Injected {side} signal @ ${price:.5f}")
+                send_push_notification(
+                    f"{'🟢 BUY' if side=='BUY' else '🔴 SELL'} Signal @ ${price:.4f}",
+                    f"{sig.get('level_label','Grid')} · {sig.get('conviction','—')} conviction",
+                    {"signal_id": sig["id"], "side": side}
+                )
             self._json({"ok":True,"signal_id":sig["id"],"price":price,"side":side})
         elif path=="/api/bot/start":
             with grid_lock: grid["running"]=True
