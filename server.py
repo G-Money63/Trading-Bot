@@ -1381,7 +1381,7 @@ html.dark .demo-banner{background:var(--xrp-light);border-color:rgba(77,142,255,
 </div>
 
 <!-- ══ VERSION BAR ══ -->
-<div class="version-bar">XRP GRID BOT · v3.3 · PAPER MODE · COINBASE ADVANCED + KRAKEN</div>
+<div class="version-bar">XRP GRID BOT · v3.4 · PAPER MODE · COINBASE ADVANCED + KRAKEN</div>
 
 <!-- ══ BULL SCORE POPUP ══ -->
 <div id="bullPopup" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.6);z-index:1000;padding:20px;overflow-y:auto" onclick="hideBullPopup()">
@@ -2527,7 +2527,20 @@ const VAPID_PUBLIC = '__VAPID_PUBLIC__';
 async function enableNotifications(){
   const btn=document.getElementById('notifBtn');
   if(btn){btn.textContent='⏳ Enabling...';btn.disabled=true;}
-  await initPushNotifications(true);
+  try {
+    await initPushNotifications(true);
+  } catch(e) {
+    console.error('Enable notifications error:', e);
+    if(btn){btn.textContent='🔔 ALERTS';btn.disabled=false;}
+    showToast('❌ '+e.message,'var(--red)');
+  }
+  // Always reset button after 5 seconds as safety net
+  setTimeout(()=>{
+    const b=document.getElementById('notifBtn');
+    if(b&&b.textContent.includes('Enabling')){
+      b.textContent='🔔 ALERTS';b.disabled=false;
+    }
+  }, 5000);
 }
 
 async function initPushNotifications(manual=false){
